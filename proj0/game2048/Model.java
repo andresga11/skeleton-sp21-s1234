@@ -5,7 +5,7 @@ import java.util.Observable;
 
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author TODO: Andres Gallego
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -106,13 +106,81 @@ public class Model extends Observable {
      *    value, then the leading two tiles in the direction of motion merge,
      *    and the trailing tile does not.
      * */
+
+//    public boolean isMerged() {
+//        return this.next() != this;
+//    }
+
+
+//    public boolean processColumn(int c, int row, Tile movingTile) {
+//        int r;
+//        for (r = 3; r >= row; r--) {
+//            Tile targetTile = board.tile(c, r);
+//            if (targetTile == null) {
+//                return board.move(c, r, movingTile);
+//            } else if (targetTile.value() == movingTile.value()) {
+//                board.move(c, r, movingTile);
+//                return true;
+//
+//            }
+//        }
+//        return true;
+//    }
+
+    private boolean processColumn(int column) {
+        int mergeLimit = 3;
+        boolean somethingChanged = false;
+
+        // Iterate over each row from top to bottom (excluding the first row)
+        for (int row = board.size() - 2; row >= 0; row -= 1) {
+            Tile currentTile = board.tile(column, row);
+
+            // Skip empty tiles
+            if(currentTile == null){
+                continue;
+            }
+
+            // Try to move or merge the current tile
+            for (int targetRow = mergeLimit; targetRow > row; targetRow--) {
+                Tile targetTile = board.tile(column, targetRow);
+
+                if(targetTile == null){
+                    // Move current tile to the empty target row
+                    board.move(column, targetRow, currentTile);
+                    somethingChanged = true;
+                    mergeLimit = targetRow;
+                    break;
+                } else if (targetTile.value() == currentTile.value()) {
+                    // Merge tiles and update score
+                    score += currentTile.value() * 2;
+                    board.move(column, targetRow, currentTile);
+                    somethingChanged = true;
+                    mergeLimit = targetRow - 1;
+                    break;
+                } else {
+                    // Update merge limit to current row if merge is not possible
+                    mergeLimit = row;
+                }
+            }
+        }
+        return somethingChanged;
+    }
+
+
     public boolean tilt(Side side) {
         boolean changed;
         changed = false;
+        board.setViewingPerspective(side);
 
         // TODO: Modify this.board (and perhaps this.score) to account
-        // for the tilt to the Side SIDE. If the board changed, set the
-        // changed local variable to true.
+
+        for (int c = 0; c < board.size(); c += 1) {
+            if (processColumn(c)) {
+                changed = true;
+            }
+        }
+
+        board.setViewingPerspective(Side.NORTH);
 
         checkGameOver();
         if (changed) {
@@ -138,6 +206,13 @@ public class Model extends Observable {
      * */
     public static boolean emptySpaceExists(Board b) {
         // TODO: Fill in this function.
+        for (int row = 0; row < b.size(); row++) {
+            for (int col = 0; col < b.size(); col++) {
+                if(b.tile(col,row) == null){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -148,6 +223,13 @@ public class Model extends Observable {
      */
     public static boolean maxTileExists(Board b) {
         // TODO: Fill in this function.
+        for (int row = 0; row < b.size(); row++) {
+            for (int col = 0; col < b.size(); col++) {
+                if(b.tile(col,row) != null && b.tile(col,row).value() == MAX_PIECE){
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -159,6 +241,31 @@ public class Model extends Observable {
      */
     public static boolean atLeastOneMoveExists(Board b) {
         // TODO: Fill in this function.
+        if(emptySpaceExists(b)){
+            return true;
+        }
+
+        int next;
+        for(int row = 0; row < b.size(); row++){
+            for(int col = 0; col < b.size() - 1; col++){
+                next = b.tile(col + 1, row).value();
+                if(b.tile(col, row).value() == next){
+                    return true;
+                }
+            }
+        }
+
+        b.startViewingFrom(Side.EAST);
+
+        for(int row = 0; row < b.size(); row++){
+            for(int col = 0; col < b.size() - 1; col++){
+                next = b.tile(col + 1, row).value();
+                if(b.tile(col, row).value() == next){
+                    return true;
+                }
+            }
+        }
+
         return false;
     }
 
